@@ -201,3 +201,117 @@ def create_timeline_chart(monthly_data):
         font=dict(family="Sarasa Gothic SC, Source Han Sans CN, sans-serif"),
     )
     return fig
+
+
+def prepare_shelf_data(shelf_books, records):
+    """Prepare table data from bookshelf merged with read records."""
+    record_map = {normalize_book_name(r["bookName"]): r for r in records}
+    rows = []
+    for b in shelf_books:
+        name = b.get("name", "未知")
+        author = b.get("author", "未知")
+        if not author or author.strip() == "":
+            author = "未知"
+        dur_title = b.get("durChapterTitle", "")
+        dur_time = b.get("durChapterTime", 0)
+        total_chapters = b.get("totalChapterNum", 0)
+        dur_idx = b.get("durChapterIndex", 0)
+
+        last_read_dt = ms_to_datetime(dur_time) if dur_time else None
+        last_read_str = last_read_dt.strftime("%Y-%m-%d") if last_read_dt else "未知"
+
+        if total_chapters > 0 and total_chapters < 10000:
+            progress = (dur_idx / total_chapters) * 100
+        else:
+            progress = None
+
+        norm_name = normalize_book_name(name)
+        total_hours = None
+        if norm_name in record_map:
+            total_hours = record_map[norm_name].get("hours")
+
+        rows.append({
+            "bookName": name[:30],
+            "author": author[:20],
+            "chapter": dur_title[:25] if dur_title else "",
+            "lastRead": last_read_str,
+            "progress": progress,
+            "totalHours": total_hours,
+            "lastReadTs": dur_time,
+        })
+
+    rows.sort(key=lambda r: r["lastReadTs"], reverse=True)
+    return rows
+
+
+def create_shelf_chart(shelf_rows):
+    """Table of shelf books."""
+    header = ["书名", "作者", "当前章节", "最后阅读", "进度", "总阅读时长"]
+    cells = [[], [], [], [], [], []]
+    for r in shelf_rows:
+        cells[0].append(r["bookName"])
+        cells[1].append(r["author"])
+        cells[2].append(r["chapter"])
+        cells[3].append(r["lastRead"])
+        if r["progress"] is not None:
+            cells[4].append(f"{r['progress']:.1f}%")
+        else:
+            cells[4].append("-")
+        if r["totalHours"] is not None:
+            cells[5].append(f"{r['totalHours']:.1f}h")
+        else:
+            cells[5].append("-")
+
+    fig = go.Figure(data=[go.Table(
+        header=dict(
+            values=header,
+            fill_color="paleturquoise",
+            align="left",
+            font=dict(size=12),
+        ),
+        cells=dict(
+            values=cells,
+            fill_color="lavender",
+            align="left",
+            font=dict(size=11),
+        ),
+    )])
+
+    fig.update_layout(
+        title="书架状态",
+        height=300 + 30 * len(shelf_rows),
+        font=dict(family="Sarasa Gothic SC, Source Han Sans CN, sans-serif"),
+    )
+    return fig
+
+
+def create_calendar_heatmap(records):
+    """Calendar heatmap of reading activity by date."""
+    date_counts = defaultdict(int)
+    for r in records:
+        d = ms_to_datetime(r["lastRead"]).date()
+        date_counts[d.isoformat()] += 1
+
+    if not date_counts:
+        return go.Figure()
+
+    dates = sorted(date_counts.keys())
+    counts = [date_counts[d] for d in dates]
+
+    fig = go.Figure(data=[go.Heatmap(
+        z=counts,
+        x=dates,
+        y=["阅读活动"],
+        colorscale="YlOrRd",
+        showscale=True,
+        hovertemplate="%{x}<br>%{z} 本书<extra></extra>",
+    )])
+
+    fig.update_layout(
+        title="每日阅读活动热力图",
+        height=120,
+        margin=dict(l=10, r=10, t=40, b=10),
+        font=dict(family="Sarasa Gothic SC, Source Han Sans CN, sans-serif"),
+        xaxis=dict(tickformat="%Y-%m", dtick="M3"),
+    )
+    return fig
