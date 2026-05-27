@@ -4,7 +4,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from visualize import load_read_records, load_bookshelf, clean_records, ms_to_datetime, normalize_book_name, prepare_rank_data, prepare_monthly_data, prepare_distribution_data
+from visualize import load_read_records, load_bookshelf, clean_records, ms_to_datetime, normalize_book_name, prepare_rank_data, prepare_monthly_data, prepare_distribution_data, create_rank_chart
 
 
 def test_load_read_records():
@@ -125,3 +125,17 @@ def test_prepare_distribution_data():
     ]
     hours_list = prepare_distribution_data(records)
     assert hours_list == [1.0, 2.0, 3.0, 10.0, 100.0]
+
+
+def test_create_rank_chart():
+    top20 = [
+        {"bookName": "三体", "hours": 100.0, "readTime": 360000},
+        {"bookName": "龙族", "hours": 50.0, "readTime": 180000},
+    ]
+    other_hours = 30.0
+    other_count = 5
+    fig = create_rank_chart(top20, other_hours, other_count)
+    assert len(fig.data) == 1
+    assert len(fig.data[0].x) == 3  # 2 books + "其他"
+    assert "三体" in fig.data[0].y
+    assert "其他" in fig.data[0].y[0]
