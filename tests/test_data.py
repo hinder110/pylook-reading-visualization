@@ -4,7 +4,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from visualize import load_read_records, load_bookshelf, clean_records, ms_to_datetime, normalize_book_name
+from visualize import load_read_records, load_bookshelf, clean_records, ms_to_datetime, normalize_book_name, prepare_rank_data, prepare_monthly_data, prepare_distribution_data
 
 
 def test_load_read_records():
@@ -77,3 +77,51 @@ def test_clean_records_adds_hours():
     ]
     result = clean_records(records)
     assert result[0]["hours"] == 2.0
+
+
+def test_prepare_rank_data_top20():
+    records = []
+    for i in range(30):
+        records.append({
+            "bookName": f"Book{i}",
+            "hours": float(30 - i),
+            "readTime": (30 - i) * 3600,
+        })
+    top20, other_hours, other_count = prepare_rank_data(records, top_n=20)
+    assert len(top20) == 20
+    assert other_count == 10
+    assert other_hours > 0
+
+
+def test_prepare_rank_data_small_list():
+    records = [{"bookName": "A", "hours": 1.0, "readTime": 3600}]
+    top20, other_hours, other_count = prepare_rank_data(records, top_n=20)
+    assert len(top20) == 1
+    assert other_count == 0
+    assert other_hours == 0
+
+
+def test_prepare_monthly_data():
+    from datetime import datetime, timezone
+    records = [
+        {"bookName": "A", "hours": 10.0, "lastRead": int(datetime(2024, 1, 15, tzinfo=timezone.utc).timestamp() * 1000)},
+        {"bookName": "B", "hours": 5.0, "lastRead": int(datetime(2024, 1, 20, tzinfo=timezone.utc).timestamp() * 1000)},
+        {"bookName": "C", "hours": 3.0, "lastRead": int(datetime(2024, 3, 10, tzinfo=timezone.utc).timestamp() * 1000)},
+    ]
+    result = prepare_monthly_data(records)
+    months = [r["month"] for r in result]
+    assert "2024-01" in months
+    assert "2024-03" in months
+    jan = [r for r in result if r["month"] == "2024-01"][0]
+    assert jan["hours"] == 15.0
+    assert "A" in jan["books"]
+    assert "B" in jan["books"]
+
+
+def test_prepare_distribution_data():
+    records = [
+        {"hours": 1.0}, {"hours": 2.0}, {"hours": 3.0},
+        {"hours": 10.0}, {"hours": 100.0},
+    ]
+    hours_list = prepare_distribution_data(records)
+    assert hours_list == [1.0, 2.0, 3.0, 10.0, 100.0]

@@ -57,3 +57,32 @@ def clean_records(records):
     for r in result:
         r["hours"] = r["readTime"] / 3600.0
     return result
+
+
+def prepare_rank_data(records, top_n=20):
+    """Sort by hours descending, return top N + other aggregation."""
+    sorted_records = sorted(records, key=lambda r: r["hours"], reverse=True)
+    top = sorted_records[:top_n]
+    rest = sorted_records[top_n:]
+    other_hours = sum(r["hours"] for r in rest)
+    return top, other_hours, len(rest)
+
+
+def prepare_monthly_data(records):
+    """Aggregate reading hours by month based on lastRead date."""
+    monthly = defaultdict(lambda: {"hours": 0.0, "books": []})
+    for r in records:
+        dt = ms_to_datetime(r["lastRead"])
+        month_key = dt.strftime("%Y-%m")
+        monthly[month_key]["hours"] += r["hours"]
+        monthly[month_key]["books"].append(r["bookName"])
+    result = [
+        {"month": k, "hours": v["hours"], "books": v["books"]}
+        for k, v in sorted(monthly.items())
+    ]
+    return result
+
+
+def prepare_distribution_data(records):
+    """Extract hours list for histogram and box plot."""
+    return [r["hours"] for r in records]
