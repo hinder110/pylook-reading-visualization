@@ -315,3 +315,80 @@ def create_calendar_heatmap(records):
         xaxis=dict(tickformat="%Y-%m", dtick="M3"),
     )
     return fig
+
+
+def build_html(figs):
+    """Assemble all figures into a single self-contained HTML page."""
+    titles = [
+        "阅读时长排名",
+        "月度阅读时间线",
+        "阅读时长分布",
+        "书架状态",
+        "每日阅读活动",
+    ]
+
+    html_parts = [
+        "<!DOCTYPE html>",
+        '<html lang="zh-CN">',
+        "<head>",
+        '<meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        "<title>阅读可视化报告</title>",
+        '<script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>',
+        "<style>",
+        "body { font-family: 'Sarasa Gothic SC', 'Source Han Sans CN', sans-serif; "
+        "max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }",
+        "h1 { text-align: center; color: #333; }",
+        ".chart { background: white; border-radius: 8px; padding: 16px; "
+        "margin-bottom: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }",
+        "</style>",
+        "</head>",
+        "<body>",
+        "<h1>📚 阅读可视化报告</h1>",
+    ]
+
+    for i, fig in enumerate(figs):
+        div_id = f"chart_{i}"
+        html_parts.append(f'<div class="chart" id="{div_id}">')
+        html_parts.append(fig.to_html(full_html=False, include_plotlyjs=False))
+        html_parts.append("</div>")
+
+    html_parts.extend(["</body>", "</html>"])
+    return "\n".join(html_parts)
+
+
+def main():
+    """Generate the reading visualization report."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    records = load_read_records()
+    shelf = load_bookshelf()
+
+    cleaned = clean_records(records)
+
+    top20, other_hours, other_count = prepare_rank_data(cleaned)
+    monthly = prepare_monthly_data(cleaned)
+    hours_list = prepare_distribution_data(cleaned)
+    shelf_rows = prepare_shelf_data(shelf, cleaned)
+
+    figs = [
+        create_rank_chart(top20, other_hours, other_count),
+        create_timeline_chart(monthly),
+        create_distribution_chart(hours_list),
+        create_shelf_chart(shelf_rows),
+        create_calendar_heatmap(cleaned),
+    ]
+
+    html = build_html(figs)
+    output_path = os.path.join(OUTPUT_DIR, "reading_report.html")
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print(f"Report generated: {output_path}")
+    print(f"Books: {len(cleaned)}, Shelf: {len(shelf)}")
+    total_hours = sum(r["hours"] for r in cleaned)
+    print(f"Total reading time: {total_hours:.0f} hours ({total_hours/24:.1f} days)")
+
+
+if __name__ == "__main__":
+    main()
