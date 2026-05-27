@@ -122,3 +122,82 @@ def create_distribution_chart(hours_list):
     fig.update_xaxes(title_text="", row=1, col=2)
     fig.update_yaxes(title_text="书籍数量", row=1, col=1)
     return fig
+
+
+def create_rank_chart(top20, other_hours, other_count):
+    """Horizontal bar chart: Top 20 books by reading hours + '其他'."""
+    names = [r["bookName"] for r in top20]
+    hours = [r["hours"] for r in top20]
+
+    if other_count > 0:
+        names.append(f"其他 ({other_count}本)")
+        hours.append(other_hours)
+
+    # Reverse so highest is at top
+    names = list(reversed(names))
+    hours = list(reversed(hours))
+
+    text = [f"{h:.1f} 小时" for h in hours]
+
+    fig = go.Figure()
+    colors = ["#636EFA"] * len(top20)
+    if other_count > 0:
+        colors.append("#CCCCCC")
+    colors = list(reversed(colors))
+
+    fig.add_trace(go.Bar(
+        x=hours,
+        y=names,
+        orientation="h",
+        text=text,
+        textposition="outside",
+        marker_color=colors,
+        hovertemplate="%{y}<br>%{x:.1f} 小时<extra></extra>",
+    ))
+
+    fig.update_layout(
+        title="阅读时长排名 (Top 20)",
+        xaxis_title="小时",
+        yaxis_title="",
+        margin=dict(l=10, r=30, t=40, b=10),
+        height=600,
+        font=dict(family="Sarasa Gothic SC, Source Han Sans CN, sans-serif"),
+    )
+    return fig
+
+
+def create_timeline_chart(monthly_data):
+    """Bar chart: monthly reading hours, colored by year."""
+    months = [d["month"] for d in monthly_data]
+    hours = [d["hours"] for d in monthly_data]
+    books = [", ".join(d["books"][:5]) + ("..." if len(d["books"]) > 5 else "")
+             for d in monthly_data]
+
+    # Color by year
+    years = [m[:4] for m in months]
+    unique_years = sorted(set(years))
+    color_map = {
+        y: f"hsl({i * 360 // len(unique_years)}, 60%, 50%)"
+        for i, y in enumerate(unique_years)
+    }
+    colors = [color_map[y] for y in years]
+
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=months,
+        y=hours,
+        marker_color=colors,
+        hovertemplate="%{x}<br>%{y:.1f} 小时<br>%{customdata}<extra></extra>",
+        customdata=books,
+    ))
+
+    fig.update_layout(
+        title="月度阅读时间线",
+        xaxis_title="月份",
+        yaxis_title="阅读时长 (小时)",
+        xaxis=dict(tickangle=-45),
+        margin=dict(l=10, r=10, t=40, b=60),
+        height=450,
+        font=dict(family="Sarasa Gothic SC, Source Han Sans CN, sans-serif"),
+    )
+    return fig
