@@ -31,13 +31,13 @@ def ms_to_datetime(ms_timestamp):
 def normalize_book_name(name):
     """Strip file extension and parenthetical suffixes."""
     name = name.strip()
-    if name.endswith(".epub"):
-        name = name[:-5]
     # Remove trailing parenthetical groups like "(作者名) (Z-Library)"
     while "(" in name and name.rstrip().endswith(")"):
         last_open = name.rfind("(")
         name = name[:last_open].rstrip()
-    return name
+    if name.endswith(".epub"):
+        name = name[:-5]
+    return name or "未知书名"
 
 
 def clean_records(records):
@@ -299,7 +299,7 @@ def create_calendar_heatmap(records):
     counts = [date_counts[d] for d in dates]
 
     fig = go.Figure(data=[go.Heatmap(
-        z=counts,
+        z=[counts],
         x=dates,
         y=["阅读活动"],
         colorscale="YlOrRd",
