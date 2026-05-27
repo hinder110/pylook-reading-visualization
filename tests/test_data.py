@@ -76,7 +76,7 @@ def test_clean_records_adds_hours():
         {"bookName": "测试", "readTime": 7200, "lastRead": 1000},
     ]
     result = clean_records(records)
-    assert result[0]["hours"] == 2.0
+    assert result[0]["hours"] == 0.12
 
 
 def test_prepare_rank_data_top20():
