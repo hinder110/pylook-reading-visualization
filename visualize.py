@@ -58,7 +58,7 @@ def clean_records(records):
             }
     result = list(merged.values())
     for r in result:
-        r["hours"] = r["readTime"] / 60000.0
+        r["hours"] = r["readTime"] / 3_600_000.0
     return result
 
 
