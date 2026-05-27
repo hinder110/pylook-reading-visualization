@@ -4,6 +4,9 @@ import os
 from datetime import datetime, timezone
 from collections import defaultdict
 
+import plotly.graph_objects as go
+import plotly.subplots
+
 BACKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backup")
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
 
@@ -86,3 +89,36 @@ def prepare_monthly_data(records):
 def prepare_distribution_data(records):
     """Extract hours list for histogram and box plot."""
     return [r["hours"] for r in records]
+
+
+def create_distribution_chart(hours_list):
+    """Side-by-side histogram and box plot of reading hours distribution."""
+    fig = plotly.subplots.make_subplots(
+        rows=1, cols=2,
+        subplot_titles=("阅读时长分布 (直方图)", "阅读时长分布 (箱线图)"),
+        column_widths=[0.6, 0.4],
+    )
+
+    fig.add_trace(go.Histogram(
+        x=hours_list,
+        nbinsx=30,
+        name="书籍数量",
+        hovertemplate="%{x:.0f} 小时: %{y} 本<extra></extra>",
+    ), row=1, col=1)
+
+    fig.add_trace(go.Box(
+        x=hours_list,
+        name="阅读时长",
+        hovertemplate="%{x:.1f} 小时<extra></extra>",
+    ), row=1, col=2)
+
+    fig.update_layout(
+        title="阅读时长分布",
+        showlegend=False,
+        height=400,
+        font=dict(family="Sarasa Gothic SC, Source Han Sans CN, sans-serif"),
+    )
+    fig.update_xaxes(title_text="阅读时长 (小时)", row=1, col=1)
+    fig.update_xaxes(title_text="", row=1, col=2)
+    fig.update_yaxes(title_text="书籍数量", row=1, col=1)
+    return fig
