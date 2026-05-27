@@ -18,3 +18,42 @@ def load_bookshelf():
     path = os.path.join(BACKUP_DIR, "bookshelf.json")
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def ms_to_datetime(ms_timestamp):
+    """Convert millisecond epoch to datetime."""
+    return datetime.fromtimestamp(ms_timestamp / 1000, tz=timezone.utc)
+
+
+def normalize_book_name(name):
+    """Strip file extension and parenthetical suffixes."""
+    name = name.strip()
+    if name.endswith(".epub"):
+        name = name[:-5]
+    # Remove trailing parenthetical groups like "(作者名) (Z-Library)"
+    while "(" in name and name.rstrip().endswith(")"):
+        last_open = name.rfind("(")
+        name = name[:last_open].rstrip()
+    return name
+
+
+def clean_records(records):
+    """Merge duplicate books by name, filter zero readTime, add hours."""
+    merged = {}
+    for r in records:
+        if r["readTime"] <= 0:
+            continue
+        name = normalize_book_name(r["bookName"])
+        if name in merged:
+            merged[name]["readTime"] += r["readTime"]
+            merged[name]["lastRead"] = max(merged[name]["lastRead"], r["lastRead"])
+        else:
+            merged[name] = {
+                "bookName": name,
+                "readTime": r["readTime"],
+                "lastRead": r["lastRead"],
+            }
+    result = list(merged.values())
+    for r in result:
+        r["hours"] = r["readTime"] / 3600.0
+    return result
